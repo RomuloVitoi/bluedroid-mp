@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings.System;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -42,6 +43,10 @@ public class BluetoothChat extends Activity
     public static final int MESSAGE_WRITE = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final int MESSAGE_TOAST = 5;
+    public static final int MESSAGE_ACK = 6;
+    
+    // Time to wait for acknowledge (in milliseconds)
+    public static final int ACK_WAIT = 1000;
 
     // Key names received from the BluetoothChatService Handler
     public static final String DEVICE_NAME = "device_name";
@@ -68,6 +73,8 @@ public class BluetoothChat extends Activity
     // Member object for the chat services
     private BluetoothChatService mChatService = null;
 
+    // Acknowledge handler
+    Handler ackHandler;
 
     @Override
     public void onCreate(Bundle savedInstanceState) 
@@ -80,6 +87,9 @@ public class BluetoothChat extends Activity
 
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        
+        // Initialize acknowledge handler
+        ackHandler = new Handler();
 
         // If the adapter is null, then Bluetooth is not supported
         if (mBluetoothAdapter == null) 
@@ -147,7 +157,7 @@ public class BluetoothChat extends Activity
                 // Send a message using content of the edit text widget
                 TextView view = (TextView) findViewById(R.id.edit_text_out);
                 String message = view.getText().toString();
-                sendMessage(message);
+                sendMessage(message, true);
             }
         });
 
@@ -196,7 +206,7 @@ public class BluetoothChat extends Activity
      * Sends a message.
      * @param message  A string of text to send.
      */
-    private void sendMessage(String message) 
+    private void sendMessage(String message, final boolean ack) 
     {
         // Check that we're actually connected before trying anything
         if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) 
@@ -209,8 +219,20 @@ public class BluetoothChat extends Activity
         if (message.length() > 0) 
         {
             // Get the message bytes and tell the BluetoothChatService to write
-            byte[] send = message.getBytes();
-            mChatService.write(send);
+            final byte[] send = message.getBytes();
+            
+            Runnable runnable = new Runnable() {
+				@Override
+				public void run() {
+					// Send message
+		            mChatService.write(send);
+		            
+		            if(ack)
+			            // Tries to send message again in ACK_WAIT milliseconds
+						ackHandler.postDelayed(this, ACK_WAIT);
+				}
+			};
+			ackHandler.post(runnable);
 
             // Reset out string buffer to zero and clear the edit text field
             mOutStringBuffer.setLength(0);
@@ -227,7 +249,7 @@ public class BluetoothChat extends Activity
             if (actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_UP) 
             {
                 String message = view.getText().toString();
-                sendMessage(message);
+                sendMessage(message, true);
             }
             if(D) Log.i(TAG, "END onEditorAction");
             return true;
@@ -276,6 +298,8 @@ public class BluetoothChat extends Activity
                 mConversationArrayAdapter.add("Me:  " + writeMessage);
                 break;
             case MESSAGE_READ:
+            	BluetoothChat.this.sendMessage("!ACK!", false);
+            	
                 byte[] readBuf = (byte[]) msg.obj;
                 // construct a string from the valid bytes in the buffer
                 String readMessage = new String(readBuf, 0, msg.arg1);
@@ -291,6 +315,12 @@ public class BluetoothChat extends Activity
                 Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
                                Toast.LENGTH_SHORT).show();
                 break;
+            case MESSAGE_ACK:
+            	// Cancel message resend
+            	ackHandler.removeCallbacksAndMessages(null);
+            	
+            	Log.i(TAG, "Message acknowledge received.");
+            	break;
             }
         }
     };
