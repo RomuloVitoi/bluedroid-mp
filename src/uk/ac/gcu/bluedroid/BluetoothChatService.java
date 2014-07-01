@@ -19,11 +19,11 @@ package uk.ac.gcu.bluedroid;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -67,6 +67,14 @@ public class BluetoothChatService {
 	private ConnectedThread mConnectedThread;
 	private int mState;
 	
+	// Time to wait for acknowledge (in milliseconds)
+	private static final int ACK_WAIT = 1000;
+
+	// Acknowledge Handler
+	Handler ackHandler;
+	ArrayList<String> tags;
+	
+	// JSON parser
 	Gson gson;
 
 	// Constants that indicate the current connection state
@@ -89,10 +97,12 @@ public class BluetoothChatService {
 	public BluetoothChatService(Context context, Handler handler) {
 		GsonBuilder builder = new GsonBuilder();
 		gson = builder.create();
+		ackHandler = new Handler();
 		
 		mAdapter = BluetoothAdapter.getDefaultAdapter();
 		mState = STATE_NONE;
 		mHandler = handler;
+		tags = new ArrayList<String>();
 	}
 
 	/**
@@ -273,21 +283,8 @@ public class BluetoothChatService {
 	 * 
 	 * @param out
 	 *            The bytes to write
-	 * @see ConnectedThread#write(byte[])
+	 * @see ConnectedThread#write(Wrapper)
 	 */
-	/*
-    public void write(byte[] out) {
-        // Create temporary object
-        ConnectedThread r;
-        // Synchronize a copy of the ConnectedThread
-        synchronized (this) {
-            if (mState != STATE_CONNECTED) return;
-            r = mConnectedThread;
-        }
-        // Perform the write unsynchronized
-        r.write(out);
-    }
-*/
 	private void write(Wrapper out) {
 		// Create temporary object
 		ConnectedThread r;
@@ -512,23 +509,11 @@ public class BluetoothChatService {
 		private final InputStream mmInStream;
 		private final OutputStream mmOutStream;
 
-		// Time to wait for acknowledge (in milliseconds)
-		private static final int ACK_WAIT = 1000;
-
-		// Acknowledge Handler
-		//Handler ackHandler;
-
-
-
 		public ConnectedThread(BluetoothSocket socket, String socketType) {
 			Log.d(TAG, "create ConnectedThread: " + socketType);
 			mmSocket = socket;
 			InputStream tmpIn = null;
 			OutputStream tmpOut = null;
-
-			//Looper.prepare();
-			//ackHandler = new Handler();
-        	//Looper.loop();
 
 			// Get the BluetoothSocket input and output streams
 			try {
@@ -560,13 +545,13 @@ public class BluetoothChatService {
                     	Log.d(TAG, "Acknowledge for message " + wrapper.message + " received.");
 
                     	// Do not send the message again
-                    	//ackHandler.removeCallbacksAndMessages(wrapper.message);
+                    	tags.remove(wrapper.message);
                     	break;
                     case Wrapper.MESSAGE:
                       	mHandler.obtainMessage(BluetoothChat.MESSAGE_RECEIVED, gson.fromJson(wrapper.message, Object.class)).sendToTarget();
                      	
                       	// Send ACK
-                      	//write(new Wrapper(Wrapper.ACK, String.valueOf(wrapper.time)));
+                      	write(new Wrapper(Wrapper.ACK, String.valueOf(wrapper.time)));
                     	break;
                     }
                 } catch (IOException e) {
@@ -586,40 +571,35 @@ public class BluetoothChatService {
 		 *            The bytes to write
 		 */
 		public void write(final Wrapper buffer) {
-			//Runnable writemsg = new Runnable() {
-				//@Override
-				//public void run() {
+			Runnable writemsg = new Runnable() {
+				@Override
+				public void run() {
 					try {
+						if(!tags.contains(String.valueOf(buffer.time)))
+							return;
+						
 						mmOutStream.write(gson.toJson(buffer).getBytes());
 						
 						if (buffer.type != Wrapper.ACK) {
+							Log.d(TAG, "Sending message " + String.valueOf(buffer.time));
+
 							mHandler.obtainMessage(BluetoothChat.MESSAGE_SENT,
 									gson.fromJson(buffer.message, Object.class)).sendToTarget();
 							
 							// Schedule to send message again in ACK_WAIT milliseconds
-							//ackHandler.postAtTime(this, String.valueOf(buffer.time), SystemClock.uptimeMillis() + ACK_WAIT);
-						}
+							ackHandler.postDelayed(this, ACK_WAIT);
+						} else
+							Log.d(TAG, "Sending ack for " + buffer.message);
 					} catch (IOException e) {
 						Log.e(TAG, "Exception during write", e);
 					}
-				//}
-			//};
+				}
+			};
 
-			//ackHandler.postAtTime(writemsg, String.valueOf(buffer.time), SystemClock.uptimeMillis());
+			tags.add(String.valueOf(buffer.time));
+			ackHandler.post(writemsg);
 		}
-		/*
-        public void write(byte[] buffer) {
-            try {
-                mmOutStream.write(buffer);
 
-                // Share the sent message back to the UI Activity
-                mHandler.obtainMessage(BluetoothChat.MESSAGE_SENT, -1, -1, buffer)
-                        .sendToTarget();
-            } catch (IOException e) {
-                Log.e(TAG, "Exception during write", e);
-            }
-        }
-		*/
 		public void cancel() {
 			try {
 				mmSocket.close();
