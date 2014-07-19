@@ -551,7 +551,9 @@ public class BluetoothChatService {
                       	mHandler.obtainMessage(BluetoothChat.MESSAGE_RECEIVED, gson.fromJson(wrapper.message, Object.class)).sendToTarget();
                      	
                       	// Send ACK
-                      	write(new Wrapper(Wrapper.ACK, String.valueOf(wrapper.time)));
+                      	if(wrapper.hash == null || wrapper.hash.equals(Util.hash(wrapper.message)))
+                      		write(new Wrapper(Wrapper.ACK, String.valueOf(wrapper.time)));
+                      	
                     	break;
                     }
                 } catch (IOException e) {
