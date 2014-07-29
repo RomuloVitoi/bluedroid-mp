@@ -1,5 +1,8 @@
 package uk.ac.gcu.bluedroid;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import android.app.Activity;
 import android.os.Bundle;
 
@@ -11,6 +14,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings.System;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -38,11 +42,11 @@ public class BluetoothChat extends Activity
 
     // Message types sent from the BluetoothChatService Handler
     public static final int MESSAGE_STATE_CHANGE = 1;
-    public static final int MESSAGE_READ = 2;
-    public static final int MESSAGE_WRITE = 3;
+    public static final int MESSAGE_RECEIVED = 2;
+    public static final int MESSAGE_SENT = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final int MESSAGE_TOAST = 5;
-
+    
     // Key names received from the BluetoothChatService Handler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
@@ -68,7 +72,6 @@ public class BluetoothChat extends Activity
     // Member object for the chat services
     private BluetoothChatService mChatService = null;
 
-
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
@@ -80,7 +83,7 @@ public class BluetoothChat extends Activity
 
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-
+        
         // If the adapter is null, then Bluetooth is not supported
         if (mBluetoothAdapter == null) 
         {
@@ -208,9 +211,7 @@ public class BluetoothChat extends Activity
         // Check that there's actually something to send
         if (message.length() > 0) 
         {
-            // Get the message bytes and tell the BluetoothChatService to write
-            byte[] send = message.getBytes();
-            mChatService.write(send);
+            mChatService.send(message);
 
             // Reset out string buffer to zero and clear the edit text field
             mOutStringBuffer.setLength(0);
@@ -269,17 +270,11 @@ public class BluetoothChat extends Activity
                     break;
                 }
                 break;
-            case MESSAGE_WRITE:
-                byte[] writeBuf = (byte[]) msg.obj;
-                // construct a string from the buffer
-                String writeMessage = new String(writeBuf);
-                mConversationArrayAdapter.add("Me:  " + writeMessage);
+            case MESSAGE_SENT:
+                mConversationArrayAdapter.add("Me:  " + msg.obj);
                 break;
-            case MESSAGE_READ:
-                byte[] readBuf = (byte[]) msg.obj;
-                // construct a string from the valid bytes in the buffer
-                String readMessage = new String(readBuf, 0, msg.arg1);
-                mConversationArrayAdapter.add(mConnectedDeviceName+":  " + readMessage);
+            case MESSAGE_RECEIVED:            	
+                mConversationArrayAdapter.add(mConnectedDeviceName+":  " + msg.obj);
                 break;
             case MESSAGE_DEVICE_NAME:
                 // save the connected device's name
