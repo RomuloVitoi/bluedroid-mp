@@ -22,6 +22,10 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -32,9 +36,7 @@ import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.os.Message;
-import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -272,8 +274,8 @@ public class BluetoothChatService {
 		setState(STATE_NONE);
 	}
 
-	public void send(Object obj) {
-		Wrapper wrapper = new Wrapper(Wrapper.MESSAGE, gson.toJson(obj));
+	public void send(String _class, Object obj) {
+		Wrapper wrapper = new Wrapper(_class, Wrapper.MESSAGE, gson.toJson(obj));
 
 		write(wrapper);
 	}
@@ -526,10 +528,30 @@ public class BluetoothChatService {
 			mmInStream = tmpIn;
 			mmOutStream = tmpOut;
 		}
+		
+		public boolean isJSONValid(String test)
+		{
+		    try 
+		    {
+		        new JSONObject(test);
+		    } 
+		    catch(JSONException ex) 
+		    {
+		        try 
+		        {
+		            new JSONArray(test);
+		        } 
+		        catch(JSONException ex2) 
+		        {
+		            return false;
+		        }
+		    }
+		    return true;
+		}
 
 		public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
-            byte[] buffer = new byte[1024];
+            byte[] buffer = new byte[20000];
             int bytes;
 
             // Keep listening to the InputStream while connected
@@ -538,7 +560,13 @@ public class BluetoothChatService {
                     // Read from the InputStream
                     bytes = mmInStream.read(buffer);
                     
-                    Wrapper wrapper = gson.fromJson(new String(buffer, 0, bytes), Wrapper.class);
+                    String json = new String(buffer, 0, bytes);
+                    while(!isJSONValid(json)) {
+                    	bytes = mmInStream.read(buffer);
+                    	json = json.concat(new String(buffer, 0, bytes));
+                    }
+                    
+                    Wrapper wrapper = gson.fromJson(json, Wrapper.class);
 
                     switch(wrapper.type) {
                     case Wrapper.ACK:
@@ -548,11 +576,18 @@ public class BluetoothChatService {
                     	tags.remove(wrapper.message);
                     	break;
                     case Wrapper.MESSAGE:
-                      	mHandler.obtainMessage(BluetoothChat.MESSAGE_RECEIVED, gson.fromJson(wrapper.message, Object.class)).sendToTarget();
+                    	Object obj = null;
+                    	
+                    	if(wrapper._class.equals("string"))
+                    		obj = gson.fromJson(wrapper.message, String.class);
+                    	else if(wrapper._class.equals("state"))
+                    		obj = gson.fromJson(wrapper.message, GameState.class);
+                    	
+                      	mHandler.obtainMessage(BluetoothChat.MESSAGE_RECEIVED, obj).sendToTarget();
                      	
                       	// Send ACK
                       	if(wrapper.hash == null || wrapper.hash.equals(Util.hash(wrapper.message)))
-                      		write(new Wrapper(Wrapper.ACK, String.valueOf(wrapper.time)));
+                      		write(new Wrapper("string", Wrapper.ACK, String.valueOf(wrapper.time)));
                       	
                     	break;
                     }

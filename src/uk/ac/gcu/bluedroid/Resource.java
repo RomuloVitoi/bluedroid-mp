@@ -18,7 +18,7 @@ public class Resource {
 	}
 
 	public void conquer(Player player){
-		player.addResource(this);
+// TODO
 	}
 
 }

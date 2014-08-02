@@ -39,4 +39,18 @@
     <string name="secure_connect">Connect a device - Secure</string>
     <string name="insecure_connect">Connect a device - Insecure</string>
     <string name="discoverable">Make discoverable</string>
+    
+    <!-- Actions Menu -->
+    <string name="move">Move</string>
+    <string name="attack">Attack</string>
+    <string name="endturn">End turn</string>
+    
+    <string name="cantMove">Can\'t move to the selected position!</string>
+    <string name="noTarget">There is no target on the selected position!</string>
+    <string name="tooFar">That\'s too far!</string>
+    
+    <!-- Units Name -->
+    <string name="soldier">Soldier</string>
+    <string name="paladin">Paladin</string>
+    <string name="archer">Archer</string>
 </resources>

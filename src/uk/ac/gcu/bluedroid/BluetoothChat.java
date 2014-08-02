@@ -1,40 +1,45 @@
 package uk.ac.gcu.bluedroid;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.os.Bundle;
 
-//import android.app.ActionBar;
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.Intent;
-import android.os.Bundle;
+import android.content.res.Resources;
+import android.graphics.Point;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.Settings.System;
+import android.support.v4.view.GestureDetectorCompat;
+import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.KeyEvent;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
+import android.util.TypedValue;
+import android.view.Display;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowManager;
+import android.view.GestureDetector.SimpleOnGestureListener;
 import android.view.View.OnClickListener;
-import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 /**
  * This is the main Activity that displays the current chat session.
  */
-public class BluetoothChat extends Activity 
+public class BluetoothChat extends Activity implements OnClickListener
 {
     // Debugging
     private static final String TAG = "BluetoothChat";
@@ -56,11 +61,6 @@ public class BluetoothChat extends Activity
     private static final int REQUEST_CONNECT_DEVICE_INSECURE = 2;
     private static final int REQUEST_ENABLE_BT = 3;
 
-    // Layout Views
-    private ListView mConversationView;
-    private EditText mOutEditText;
-    private Button mSendButton;
-
     // Name of the connected device
     private String mConnectedDeviceName = null;
     // Array adapter for the conversation thread
@@ -72,14 +72,65 @@ public class BluetoothChat extends Activity
     // Member object for the chat services
     private BluetoothChatService mChatService = null;
 
+    private static final String START_GAME = "start";
+    private static final String END_GAME = "end";
+    
+    private Button startButton, connectionButton, mapButton1, mapButton2, mapButton3;
+	private Context context;
+	private boolean gameOn = false;
+	private boolean server = false;
+	private int player = 0;
+	private boolean myTurn = false;
+	
+	ScrollView scrollY;
+	HorizontalScrollView scrollX;
+	RelativeLayout mapContainer;
+	private GameState state;
+	private GestureDetectorCompat mDetector;
+	
+	Unit selected = null;
+	
+	private final int ACTION_NONE = 0;
+	private final int ACTION_MOVE = 1;
+	private final int ACTION_ATTACK = 2;
+	
+	private int action = ACTION_NONE;
+	    
     @Override
     public void onCreate(Bundle savedInstanceState) 
     {
         super.onCreate(savedInstanceState);
+
+        context = this;
+        
         if(D) Log.e(TAG, "+++ ON CREATE +++");
+        
+	    requestWindowFeature(Window.FEATURE_NO_TITLE);
+	    getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         // Set up the window layout
         setContentView(R.layout.main);
+        
+		startButton = (Button) findViewById(R.id.startButton);
+		startButton.setOnClickListener(this);
+		startButton.setVisibility(View.GONE);
+		
+		connectionButton = (Button) findViewById(R.id.connectionButton);
+		connectionButton.setOnClickListener(this);
+
+		mapButton1 = (Button) findViewById(R.id.mapButton1);
+		mapButton1.setOnClickListener(this);
+		/*
+		mapButton2 = (Button) findViewById(R.id.mapButton2);
+		mapButton2.setOnClickListener(this);
+		mapButton3 = (Button) findViewById(R.id.mapButton3);
+		mapButton3.setOnClickListener(this);
+		*/
+		mapButton1.setVisibility(View.GONE);
+		/*
+		mapButton2.setVisibility(View.GONE);
+		mapButton3.setVisibility(View.GONE);
+		*/
 
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -92,6 +143,110 @@ public class BluetoothChat extends Activity
             return;
         }
     }
+    
+	@Override
+	public void onClick(View v) 
+	{
+		if (v==startButton) 
+		{
+			mapButton1.setVisibility(View.VISIBLE);
+			/*
+			mapButton2.setVisibility(View.VISIBLE);
+			mapButton3.setVisibility(View.VISIBLE);
+			*/
+			connectionButton.setVisibility(View.GONE);
+			startButton.setVisibility(View.GONE);
+		}
+
+		if(v==connectionButton)
+		{
+			Log.d(TAG, "----Connections Button----");
+			showcustomDialog();
+		}
+
+		if(v==mapButton1)
+		{
+			setupMap(1);
+		}
+
+		if(v==mapButton2)
+		{
+			setupMap(2);
+		}
+
+		if(v==mapButton3)
+		{
+			setupMap(3);
+		}
+	}
+	
+	private void setupMap(int mapId){
+		Log.d(TAG, "----Start Button----");
+		
+		if(server)
+			sendStart(mapId);
+		
+		gameOn = true;
+		
+		setContentView(R.layout.map);
+		
+		state = new GameState();
+		
+		scrollY = (ScrollView) findViewById(R.id.scrollY);
+		scrollX = (HorizontalScrollView) findViewById(R.id.scrollX);
+
+		mapContainer = (RelativeLayout) findViewById(R.id.map);
+
+		mDetector = new GestureDetectorCompat(this, new MyOnGestureListener());
+		
+		findViewById(R.id.endturn).setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View arg0) {
+				if(myTurn)
+					sendState();
+			}
+		});
+			
+		drawEverything();
+	}
+	
+	private void showcustomDialog()
+	{
+		final Dialog dialog = new Dialog(this);
+
+		//Gets the dialogs XML file.
+		dialog.setContentView(R.layout.dialog_info);
+		dialog.setTitle("Connection Menu");
+		dialog.setCancelable(true);
+
+		//Intent serverIntent = null;
+
+		Button dialogButton1 = (Button) dialog.findViewById(R.id.connectDialogButton);			
+		dialogButton1.setOnClickListener(new OnClickListener() 
+		{
+			@Override
+			public void onClick(View v) 
+			{
+				Intent serverIntent = new Intent(context, DeviceListActivity.class);
+				startActivityForResult(serverIntent,
+						REQUEST_CONNECT_DEVICE_INSECURE);
+
+				dialog.dismiss();
+			}
+		});
+
+		Button dialogButton2 = (Button) dialog.findViewById(R.id.discoverableDialogButton);			
+		dialogButton2.setOnClickListener(new OnClickListener() 
+		{
+			@Override
+			public void onClick(View v) 
+			{
+				ensureDiscoverable();
+				dialog.dismiss();
+			}
+		});
+		dialog.show();	
+	}
 
     @Override
     public void onStart() 
@@ -131,28 +286,6 @@ public class BluetoothChat extends Activity
     private void setupChat() 
     {
         Log.d(TAG, "setupChat()");
-
-        // Initialize the array adapter for the conversation thread
-        mConversationArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
-        mConversationView = (ListView) findViewById(R.id.in);
-        mConversationView.setAdapter(mConversationArrayAdapter);
-
-        // Initialize the compose field with a listener for the return key
-        mOutEditText = (EditText) findViewById(R.id.edit_text_out);
-        mOutEditText.setOnEditorActionListener(mWriteListener);
-
-        // Initialize the send button with a listener that for click events
-        mSendButton = (Button) findViewById(R.id.button_send);
-        mSendButton.setOnClickListener(new OnClickListener() 
-        {
-            public void onClick(View v) 
-            {
-                // Send a message using content of the edit text widget
-                TextView view = (TextView) findViewById(R.id.edit_text_out);
-                String message = view.getText().toString();
-                sendMessage(message);
-            }
-        });
 
         // Initialize the BluetoothChatService to perform bluetooth connections
         mChatService = new BluetoothChatService(this, mHandler);
@@ -195,56 +328,24 @@ public class BluetoothChat extends Activity
         }
     }
 
-    /**
-     * Sends a message.
-     * @param message  A string of text to send.
-     */
-    private void sendMessage(String message) 
-    {
-        // Check that we're actually connected before trying anything
+    private boolean checkConnected() {
         if (mChatService.getState() != BluetoothChatService.STATE_CONNECTED) 
         {
             Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Check that there's actually something to send
-        if (message.length() > 0) 
-        {
-            mChatService.send(message);
-
-            // Reset out string buffer to zero and clear the edit text field
-            mOutStringBuffer.setLength(0);
-            mOutEditText.setText(mOutStringBuffer);
-        }
+            return false;
+        } else
+        	return true;
     }
-
-    // The action listener for the EditText widget, to listen for the return key
-    private TextView.OnEditorActionListener mWriteListener =
-        new TextView.OnEditorActionListener() {
-        public boolean onEditorAction(TextView view, int actionId, KeyEvent event) 
-        {
-            // If the action is a key-up event on the return key, send the message
-            if (actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_UP) 
-            {
-                String message = view.getText().toString();
-                sendMessage(message);
-            }
-            if(D) Log.i(TAG, "END onEditorAction");
-            return true;
-        }
-    };
-
-    private final void setStatus(int resId) 
-    {
-        //final ActionBar actionBar = getActionBar();
-        //actionBar.setSubtitle(resId);
+    
+    private void sendStart(int mapId) {
+    	if(checkConnected())
+    		mChatService.send("string", START_GAME + "," + mapId);
     }
-
-    private final void setStatus(CharSequence subTitle) 
+    
+    private void sendState() 
     {
-        //final ActionBar actionBar = getActionBar();
-        //actionBar.setSubtitle(subTitle);
+    	if(checkConnected())
+            mChatService.send("state", state);
     }
 
     // The Handler that gets information back from the BluetoothChatService
@@ -258,32 +359,50 @@ public class BluetoothChat extends Activity
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
                 switch (msg.arg1) {
                 case BluetoothChatService.STATE_CONNECTED:
-                    setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
-                    mConversationArrayAdapter.clear();
+                    if(server) {
+                    	startButton.setVisibility(View.VISIBLE);
+                    	player = 1;
+                    	myTurn = true;
+                    } else
+                    	player = 2;
                     break;
                 case BluetoothChatService.STATE_CONNECTING:
-                    setStatus(R.string.title_connecting);
                     break;
                 case BluetoothChatService.STATE_LISTEN:
                 case BluetoothChatService.STATE_NONE:
-                    setStatus(R.string.title_not_connected);
                     break;
                 }
                 break;
             case MESSAGE_SENT:
-                mConversationArrayAdapter.add("Me:  " + msg.obj);
+            	if(msg.obj instanceof String) {
+            		
+            	} else {
+            		myTurn = false;
+            	}
                 break;
-            case MESSAGE_RECEIVED:            	
-                mConversationArrayAdapter.add(mConnectedDeviceName+":  " + msg.obj);
+            case MESSAGE_RECEIVED:
+            	if(msg.obj instanceof String) {
+            		String message = (String) msg.obj;
+            		String[] pieces = message.split(",");
+
+            		if(pieces[0].equals(START_GAME)) {
+            			setupMap(Integer.valueOf(pieces[1]));
+            		}
+            	} else {
+            		myTurn = true;
+            		state = (GameState) msg.obj;
+            		drawEverything();
+            	}
+            	
                 break;
             case MESSAGE_DEVICE_NAME:
                 // save the connected device's name
                 mConnectedDeviceName = msg.getData().getString(DEVICE_NAME);
-                Toast.makeText(getApplicationContext(), "Connected to "
+                Toast.makeText(context, "Connected to "
                                + mConnectedDeviceName, Toast.LENGTH_SHORT).show();
                 break;
             case MESSAGE_TOAST:
-                Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
+                Toast.makeText(context, msg.getData().getString(TOAST),
                                Toast.LENGTH_SHORT).show();
                 break;
             }
@@ -295,18 +414,11 @@ public class BluetoothChat extends Activity
         if(D) Log.d(TAG, "onActivityResult " + resultCode);
         switch (requestCode) 
         {
-        case REQUEST_CONNECT_DEVICE_SECURE:
-            // When DeviceListActivity returns with a device to connect
-            if (resultCode == Activity.RESULT_OK) 
-            {
-                connectDevice(data, true);
-            }
-            break;
         case REQUEST_CONNECT_DEVICE_INSECURE:
             // When DeviceListActivity returns with a device to connect
             if (resultCode == Activity.RESULT_OK) 
             {
-                connectDevice(data, false);
+                connectDevice(data);
             }
             break;
         case REQUEST_ENABLE_BT:
@@ -324,7 +436,7 @@ public class BluetoothChat extends Activity
         }
     }
 
-    private void connectDevice(Intent data, boolean secure) 
+    private void connectDevice(Intent data) 
     {
         // Get the device MAC address
         String address = data.getExtras()
@@ -332,39 +444,168 @@ public class BluetoothChat extends Activity
         // Get the BluetoothDevice object
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         // Attempt to connect to the device
-        mChatService.connect(device, secure);
-    }
+        mChatService.connect(device, false);
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) 
-    {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.option_menu, menu);
-        return true;
+        server = true;
     }
+    
+	@Override
+	public boolean dispatchTouchEvent(MotionEvent event) {
+		super.dispatchTouchEvent(event);
+		if(gameOn) {
+			scrollX.dispatchTouchEvent(event);
+			scrollY.onTouchEvent(event);
+			mDetector.onTouchEvent(event);
+		}
+		return true;
+	}
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) 
-    {
-        Intent serverIntent = null;
-        switch (item.getItemId()) 
-        {
-        case R.id.secure_connect_scan:
-            // Launch the DeviceListActivity to see devices and do scan
-            serverIntent = new Intent(this, DeviceListActivity.class);
-            startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
-            return true;
-        case R.id.insecure_connect_scan:
-            // Launch the DeviceListActivity to see devices and do scan
-            serverIntent = new Intent(this, DeviceListActivity.class);
-            startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
-            return true;
-        case R.id.discoverable:
-            // Ensure this device is discoverable by others
-            ensureDiscoverable();
-            return true;
-        }
-        return false;
-    }
+	int DPtoPX(Context context, float dp) {
+		Resources r = context.getResources();
+		return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp,
+				r.getDisplayMetrics());
+	}
+	
+	float PXtoDP(Context context, float px){
+	    Resources resources = context.getResources();
+	    DisplayMetrics metrics = resources.getDisplayMetrics();
+	    return (px / (metrics.densityDpi / 158.4f));
+	}
+	
+	void drawEverything() {
+		// Remove views
+		for(int i = mapContainer.getChildCount(); i > 0 ; i--) {
+			View child = mapContainer.getChildAt(i-1);
+			if(child.getId() != R.id.mapimg)
+				mapContainer.removeViewAt(i-1);
+		}
+		
+		// Add views
+		addUnits();
+	}
+	
+	void addUnits() {
+		for(int i = 0; i < state.map.getX(); i++) {
+			for(int j = 0; j < state.map.getY(); j++) {
+				Unit u = state.map.getUnit(i, j);
+				if(u == null)
+					continue;
+				
+				ImageView unit = new ImageView(this);
+						
+				unit.setImageResource(getResources().getIdentifier((u.prefix + u.getOwner()), "drawable", getPackageName()));
+				
+				RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(DPtoPX(this, 50), DPtoPX(this, 50));
+				lp.addRule(RelativeLayout.ALIGN_PARENT_START);
+				lp.leftMargin = DPtoPX(this, i * 50f);
+				lp.topMargin = DPtoPX(this, j * 50f);
+		
+				mapContainer.addView(unit, lp);
+			}
+		}
+	}
 
+	class MyOnGestureListener extends SimpleOnGestureListener {
+		@Override
+		public boolean onSingleTapConfirmed(MotionEvent event) {
+			if(!myTurn)
+				return true;
+			
+			Point size = new Point();
+			Display display = getWindowManager().getDefaultDisplay();
+			display.getSize(size);
+
+			if(event.getY() < DPtoPX(context, 50) || event.getY() > size.y - DPtoPX(context, 50))
+				return true;
+
+			int tmpX = ((int) event.getX() + scrollX.getScrollX());
+			int tmpY = ((int) event.getY() + scrollY.getScrollY() - DPtoPX(context, 50));
+
+			int x = (int) Math.floor((PXtoDP(context, tmpX)/50));
+			int y = (int) Math.floor((PXtoDP(context, tmpY)/50));
+
+			switch(action) {
+			case ACTION_NONE:
+				selected = state.map.getUnit(x, y);
+				if(selected != null) { 
+					if(selected.getOwner() != player)
+						return true;
+					
+					View view = getLayoutInflater().inflate(R.layout.actions, null);
+					AlertDialog.Builder builder = new AlertDialog.Builder(context);
+					builder.setView(view);
+					final Dialog dialog = builder.show();
+					
+					TextView name = (TextView) view.findViewById(R.id.name);
+					TextView life = (TextView) view.findViewById(R.id.life);
+					ProgressBar lifebar = (ProgressBar) view.findViewById(R.id.lifebar);
+					
+					if(selected.prefix.equals("a"))
+						name.setText(R.string.archer);
+					else if(selected.prefix.equals("i"))
+						name.setText(R.string.soldier);
+					else if(selected.prefix.equals("c"))
+						name.setText(R.string.paladin);
+					
+					life.setText(selected.life + "/" + selected.max_life);
+					lifebar.setProgress(Math.round(100*selected.life/(float)selected.max_life));
+					
+					Button move = (Button) view.findViewById(R.id.move);
+					Button attack = (Button) view.findViewById(R.id.attack);
+					
+					move.setOnClickListener(new OnClickListener() {
+						@Override
+						public void onClick(View arg0) {
+							action = ACTION_MOVE;
+							dialog.dismiss();
+						}
+					});
+					
+					attack.setOnClickListener(new OnClickListener() {
+						@Override
+						public void onClick(View arg0) {
+							action = ACTION_ATTACK;
+							dialog.dismiss();
+						}
+					});
+				}
+				break;
+			case ACTION_MOVE:
+				if(selected != null) {
+					Log.e("pos", x + " " + y);
+					if(!state.map.walkable(x, y))
+						Toast.makeText(context, R.string.cantMove, Toast.LENGTH_SHORT).show();
+					//else if(!map.canWalkTo(selected.getPosition().x, selected.getPosition().y, x, y, selected.move))
+					//	Toast.makeText(MapActivity.this, R.string.tooFar, Toast.LENGTH_SHORT).show();
+					else
+						state.map.moveUnit(selected, x, y);
+					
+					selected = null;
+					action = ACTION_NONE;
+				}
+				break;
+			case ACTION_ATTACK:
+				if(selected != null) {
+					Unit target = state.map.getUnit(x, y);
+					if(target != null) {
+						if(Math.abs(selected.getPosition().x - target.getPosition().x) + Math.abs(selected.getPosition().y - target.getPosition().y) <= selected.range) {
+						target.takeDemage(selected.power);
+						
+						if(target.life == 0)
+							state.map.removeUnit(target);
+						} else
+							Toast.makeText(context, R.string.tooFar, Toast.LENGTH_SHORT).show();
+					} else
+						Toast.makeText(context, R.string.noTarget, Toast.LENGTH_SHORT).show();
+					
+					selected = null;
+					action = ACTION_NONE;
+				}
+				break;
+			}
+			
+			drawEverything();
+			return true;
+		}
+	}
 }
