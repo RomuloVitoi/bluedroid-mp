@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<!-- Copyright (C) 2009 The Android Open Source Project
+<!--
+     Copyright (C) 2009 The Android Open Source Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -16,41 +17,79 @@
 -->
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_name">Bluetooth Chat</string>
 
-    <!--  BluetoothChat -->
+    <string name="app_name">Caledonian Conquer</string>
+
+    <!-- BluetoothChat -->
     <string name="send">Send</string>
     <string name="not_connected">You are not connected to a device</string>
     <string name="bt_not_enabled_leaving">Bluetooth was not enabled. Leaving Bluetooth Chat.</string>
-    <string name="title_connecting">connecting...</string>
-    <string name="title_connected_to">connected to <xliff:g id="device_name">%1$s</xliff:g></string>
-    <string name="title_not_connected">not connected</string>
+    <string name="title_connecting">Connecting...</string>
+    <string name="title_connected_to">Connected to <xliff:g id="device_name">%1$s</xliff:g></string>
+    <string name="title_not_connected">Cot connected</string>
 
-    <!--  DeviceListActivity -->
-    <string name="scanning">scanning for devices...</string>
-    <string name="select_device">select a device to connect</string>
+    <!-- DeviceListActivity -->
+    <string name="scanning">Scanning for devices...</string>
+    <string name="select_device">Select a device to connect</string>
     <string name="none_paired">No devices have been paired</string>
     <string name="none_found">No devices found</string>
     <string name="title_paired_devices">Paired Devices</string>
     <string name="title_other_devices">Other Available Devices</string>
     <string name="button_scan">Scan for devices</string>
-
+    
+    <!--  Menu -->
+    <string name="connection">Connection</string>
+    <string name="exit">Exit App</string>
+    <string name="start">Start Game</string>
+    <string name="map1">Map 1</string>
+    <string name="map2">Map 2</string>
+    <string name="map3">Map 3</string>
+	<string name="logo">Logo</string>
+    
+    
     <!-- Options Menu -->
     <string name="secure_connect">Connect a device - Secure</string>
     <string name="insecure_connect">Connect a device - Insecure</string>
     <string name="discoverable">Make discoverable</string>
+
+    <!-- Camp layout -->
+    <string name="ok">OK</string>
+    <string name="camp">Camp</string>
+    <string name="camp_title">What kind of unit would you like to create?</string>
+    <string name="camp_alert">This camp does not belong to any player or it belongs to your enemy.\nYou need to conquer this camp before using it to create new units.</string>
+    <string name="camp_alert2">This camp is out of working.\nIt had already been used to create an unit.</string>
     
     <!-- Actions Menu -->
     <string name="move">Move</string>
     <string name="attack">Attack</string>
+    <string name="cancel">Cancel</string>
     <string name="endturn">End turn</string>
-    
     <string name="cantMove">Can\'t move to the selected position!</string>
     <string name="noTarget">There is no target on the selected position!</string>
     <string name="tooFar">That\'s too far!</string>
-    
+	<string name="ownUnit">You can not attack your own unit!</string>
+	<string name="enoughResources">You do not have enough resources to create this unit.</string>
+
     <!-- Units Name -->
     <string name="soldier">Soldier</string>
     <string name="paladin">Paladin</string>
     <string name="archer">Archer</string>
+    <string name="unit">Unit</string>
+    
+    <!-- Map  -->
+    <string name="gold">Gold: </string>
+    <string name="food">Food: </string>
+    <string name="camps">Camps: </string>
+    <string name="crops">Crops: </string>
+    <string name="mines">Mines: </string>
+    <string name="resources">Resources</string>
+    <string name="player">Player: </string>
+    
+    <!-- Options  -->
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="exitTitle">Exit?</string>
+    <string name="exitText">Are you sure you want to quit the game?</string>
+    
+
 </resources>

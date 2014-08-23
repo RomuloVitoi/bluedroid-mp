@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/dialogInfo"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:gravity="center_vertical"
+    android:orientation="vertical" >
+
+    
+
+    <Button
+        android:id="@+id/discoverableDialogButton"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="6dp"
+        android:text="@string/discoverable" />
+
+    <Button
+        android:id="@+id/connectDialogButton"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="6dp"
+        android:text="@string/connection" />
+
+
+</LinearLayout>

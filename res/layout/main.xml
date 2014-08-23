@@ -1,58 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/main"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:gravity="center_vertical"
     android:orientation="vertical" >
+    
+    <ImageView
+        android:id="@+id/logo"
+        android:layout_margin="6dp"
+        android:layout_width="wrap_content"
+        android:layout_height="210dp"
+        android:contentDescription="@string/logo"
+        android:src="@drawable/rascunho7" />
 
     <Button
         android:id="@+id/startButton"
-        android:layout_width="176dp"
+        android:layout_margin="5dp"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_gravity="center"
+        android:layout_gravity="center_vertical"
         android:gravity="center"
-        android:text="Start Game"
-        android:textSize="32sp" />
+        android:text="@string/start"
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/connectionButton"
-        android:layout_width="190dp"
+        android:layout_margin="5dp"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/startButton"
-        android:layout_centerHorizontal="true"
         android:gravity="center"
-        android:text="Connection"
-        android:textSize="32sp" />
+        android:text="@string/connection"
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/mapButton1"
-        android:layout_width="190dp"
+        android:layout_margin="5dp"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:layout_centerHorizontal="true"
         android:gravity="center"
-        android:text="Map 1"
-        android:textSize="32sp" />
-<!-- 
+        android:text="@string/map1"
+        android:textSize="20sp" />
+
     <Button
         android:id="@+id/mapButton2"
-        android:layout_width="190dp"
+        android:layout_margin="5dp"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/mapButton1"
-        android:layout_centerHorizontal="true"
         android:gravity="center"
-        android:text="Map 2"
-        android:textSize="32sp" />
+        android:text="@string/map2"
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/mapButton3"
-        android:layout_width="190dp"
+        android:layout_margin="5dp"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/mapButton2"
-        android:layout_centerHorizontal="true"
         android:gravity="center"
-        android:text="Map 3"
-        android:textSize="32sp" />
- -->
-</RelativeLayout>
+        android:text="@string/map3"
+        android:textSize="20sp" />
+    
+    <Button
+        android:id="@+id/exit"
+        android:layout_margin="5dp"
+        style="@style/btnStyleBlackpearl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/exit"
+        android:textSize="20sp" />
+
+</LinearLayout>

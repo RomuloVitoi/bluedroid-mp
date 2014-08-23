@@ -2,6 +2,8 @@ package uk.ac.gcu.bluedroid;
 
 import java.io.Serializable;
 
+import uk.ac.gcu.bluedroid.util.Util;
+
 public class Wrapper implements Serializable {
 	public static final int ACK = 0;
 	public static final int MESSAGE = 1;
