@@ -166,35 +166,38 @@ public class MainActivity extends Activity implements OnClickListener {
 						"I'm sorry.\nThis map is not available yet", context);
 			}
 		});
-		
+
 		exitButton = (Button) findViewById(R.id.exit);
 		exitButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
-				View view = getLayoutInflater().inflate(R.layout.exit_confirmation, null);
+				View view = getLayoutInflater().inflate(
+						R.layout.exit_confirmation, null);
 				AlertDialog.Builder builder = new AlertDialog.Builder(context);
 				builder.setView(view);
 				final Dialog dialog = builder.show();
-				
-				view.findViewById(R.id.yes).setOnClickListener(new OnClickListener() {
-					
-					@Override
-					public void onClick(View v) {
-						MainActivity.this.finish();
-						
-					}
-				});
-				
-				view.findViewById(R.id.no).setOnClickListener(new OnClickListener() {
-					
-					@Override
-					public void onClick(View v) {
-						dialog.dismiss();
-						
-					}
-				});
-				
+
+				view.findViewById(R.id.yes).setOnClickListener(
+						new OnClickListener() {
+
+							@Override
+							public void onClick(View v) {
+								MainActivity.this.finish();
+
+							}
+						});
+
+				view.findViewById(R.id.no).setOnClickListener(
+						new OnClickListener() {
+
+							@Override
+							public void onClick(View v) {
+								dialog.dismiss();
+
+							}
+						});
+
 			}
 		});
 
@@ -249,7 +252,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	 */
 	@SuppressLint("InflateParams")
 	private void setupMap(int mapId) {
-		
+
 		Log.d(TAG, "----Start Button----");
 
 		if (server)
@@ -905,7 +908,8 @@ public class MainActivity extends Activity implements OnClickListener {
 		} else if (selectedResource instanceof Camp) { // if it's a camp
 			if (selectedResource.getOwner() == 0) { // if the camp has no owner
 				// setup dialog
-				view = getLayoutInflater().inflate(R.layout.camp_alert_no_owner, null);
+				view = getLayoutInflater().inflate(
+						R.layout.camp_alert_no_owner, null);
 				builder.setView(view);
 				final Dialog dialog2 = builder.show();
 				Button ok = (Button) view.findViewById(R.id.ok);
@@ -1084,10 +1088,12 @@ public class MainActivity extends Activity implements OnClickListener {
 					if (state.getMap().walkable(x, y) == 0)
 						Toast.makeText(context, R.string.cantMove,
 								Toast.LENGTH_SHORT).show();
-					// else if(!map.canWalkTo(selectedUnit.getPosition().x,
-					// selectedUnit.getPosition().y, x, y, selectedUnit.move))
-					// Toast.makeText(MapActivity.this, R.string.tooFar,
-					// Toast.LENGTH_SHORT).show();
+					else if (!state.getMap().canWalkTo(
+							selectedUnit.getPosition().getX(),
+							selectedUnit.getPosition().getY(), x, y,
+							selectedUnit.getMove()))
+						Toast.makeText(MainActivity.this, R.string.tooFar,
+								Toast.LENGTH_SHORT).show();
 					else { // can be a resource
 						if (state.getMap().walkable(x, y) == Player.CAMPS) { // if
 																				// it's

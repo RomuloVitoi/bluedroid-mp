@@ -1,5 +1,7 @@
 package uk.ac.gcu.bluedroid.game;
 
+import java.util.List;
+
 import uk.ac.gcu.bluedroid.resources.Camp;
 import uk.ac.gcu.bluedroid.resources.Crop;
 import uk.ac.gcu.bluedroid.resources.Mine;
@@ -8,6 +10,8 @@ import uk.ac.gcu.bluedroid.units.Archer;
 import uk.ac.gcu.bluedroid.units.Paladin;
 import uk.ac.gcu.bluedroid.units.Soldier;
 import uk.ac.gcu.bluedroid.units.Unit;
+import uk.ac.gcu.bluedroid.util.Node;
+import uk.ac.gcu.bluedroid.util.Pathfinder;
 import uk.ac.gcu.bluedroid.util.Position;
 import android.content.Context;
 import android.widget.Toast;
@@ -155,7 +159,7 @@ public class Map {
 	}
 
 	/**
-	 * THIS FUNCTION IS NOT WORKING
+	 * See if there's a valid path within the range from point 1 to point 2
 	 * 
 	 * @param x0
 	 * @param y0
@@ -165,30 +169,8 @@ public class Map {
 	 * @return
 	 */
 	public boolean canWalkTo(int x0, int y0, int x1, int y1, int range) {
-		boolean able = true;
-		int disX = Math.abs(x0 - x1);
-		int disY = Math.abs(y0 - y1);
-
-		if ((disX + disY) > range)
-			return false;
-		if (disX > 0 && disY > 0)
-			return false;
-		if (disX > 0)
-			for (int i = 1; i <= disX; i++) {
-				if (walkable((x0 + i), y0) == 0) {
-					able = false;
-					break;
-				}
-			}
-		else {
-			for (int i = 1; i <= disY; i++) {
-				if (walkable(x0, (y0 + i)) == 0) {
-					able = false;
-					break;
-				}
-			}
-		}
-		return able;
+		List<Node> path = Pathfinder.generate(y0, x0, y1, x1, selectedMap);
+		return path.size() != 0 && path.size() <= range;
 	}
 
 	/**
