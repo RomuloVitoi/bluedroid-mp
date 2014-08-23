@@ -1,7 +1,8 @@
 package uk.ac.gcu.bluedroid;
 
 import java.io.Serializable;
-import java.security.MessageDigest;
+
+import uk.ac.gcu.bluedroid.util.Util;
 
 public class Wrapper implements Serializable {
 	public static final int ACK = 0;
@@ -11,14 +12,16 @@ public class Wrapper implements Serializable {
 	public Long time;
 	public String message;
 	public String hash;
+	public final String _class;
 	
-	public Wrapper(int type) {
+	public Wrapper(String _class, int type) {
 		this.time = System.currentTimeMillis();
 		this.type = type;
+		this._class = _class;
 	}
 	
-	public Wrapper(int type, String message) {
-		this(type);
+	public Wrapper(String _class, int type, String message) {
+		this(_class, type);
 		this.message = message;
 		this.hash = Util.hash(message);
 	}
