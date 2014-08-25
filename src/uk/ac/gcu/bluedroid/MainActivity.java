@@ -166,35 +166,38 @@ public class MainActivity extends Activity implements OnClickListener {
 						"I'm sorry.\nThis map is not available yet", context);
 			}
 		});
-		
+
 		exitButton = (Button) findViewById(R.id.exit);
 		exitButton.setOnClickListener(new OnClickListener() {
-			
+
 			@Override
 			public void onClick(View v) {
-				View view = getLayoutInflater().inflate(R.layout.exit_confirmation, null);
+				View view = getLayoutInflater().inflate(
+						R.layout.exit_confirmation, null);
 				AlertDialog.Builder builder = new AlertDialog.Builder(context);
 				builder.setView(view);
 				final Dialog dialog = builder.show();
-				
-				view.findViewById(R.id.yes).setOnClickListener(new OnClickListener() {
-					
-					@Override
-					public void onClick(View v) {
-						MainActivity.this.finish();
-						
-					}
-				});
-				
-				view.findViewById(R.id.no).setOnClickListener(new OnClickListener() {
-					
-					@Override
-					public void onClick(View v) {
-						dialog.dismiss();
-						
-					}
-				});
-				
+
+				view.findViewById(R.id.yes).setOnClickListener(
+						new OnClickListener() {
+
+							@Override
+							public void onClick(View v) {
+								MainActivity.this.finish();
+
+							}
+						});
+
+				view.findViewById(R.id.no).setOnClickListener(
+						new OnClickListener() {
+
+							@Override
+							public void onClick(View v) {
+								dialog.dismiss();
+
+							}
+						});
+
 			}
 		});
 
@@ -249,7 +252,7 @@ public class MainActivity extends Activity implements OnClickListener {
 	 */
 	@SuppressLint("InflateParams")
 	private void setupMap(int mapId) {
-		
+
 		Log.d(TAG, "----Start Button----");
 
 		if (server)
@@ -277,11 +280,7 @@ public class MainActivity extends Activity implements OnClickListener {
 			@Override
 			public void onClick(View arg0) {
 				if (isMyTurn) {
-					progressDialog = new ProgressDialog(context);
-					progressDialog.setMessage("Waiting for other Player..");
-					progressDialog.setCanceledOnTouchOutside(false);
-					progressDialog.show();
-					// sendState();
+					endTurn();
 				}
 			}
 		});
@@ -446,17 +445,17 @@ public class MainActivity extends Activity implements OnClickListener {
 		if (checkConnected()) {
 			mChatService.send("turn_info", myTurn);
 			showProgressDialog();
-			myTurn.resetValues();
 		}
 	}
 
-	/**
-	 * TODO: THIS METHOD IS NOT WORKING PROPERLY
-	 */
-	private void sendState() {
-		if (checkConnected()) {
-			mChatService.send("state", state);
-		}
+	private void endTurn() {
+		selectedUnit = null;
+		action = ACTION_NONE;
+
+		state.getMap().updateResources(state.getPlayers()[player - 1]);
+
+		state.updateTurn();
+		sendTurn();
 	}
 
 	/**
@@ -478,7 +477,6 @@ public class MainActivity extends Activity implements OnClickListener {
 						isMyTurn = true;
 					} else {
 						player = 2;
-						// isMyTurn = false; //TODO conferir
 					}
 					break;
 				case BluetoothChatService.STATE_CONNECTING:
@@ -503,66 +501,33 @@ public class MainActivity extends Activity implements OnClickListener {
 						setupMap(Integer.valueOf(pieces[1]));
 					}
 				} else {
-					isMyTurn = true;
-					// progressDialog.dismiss();
 					enemyTurn = (TurnInfo) msg.obj;
-					// Toast.makeText(context, "Enemy moved!",
-					// Toast.LENGTH_SHORT).show();
 
-					if (enemyTurn.getHasMoved())
-						state.getMap().moveUnit(
-								state.getMap().getUnit(
-										enemyTurn.getUnitStartPos()),
-								enemyTurn.getUnitEndPos().getX(),
-								enemyTurn.getUnitEndPos().getY());
+					if (enemyTurn.getRecruitedUnit() != TurnInfo.HAS_NOT_RECRUITED) {
+						if (enemyTurn.getHasMoved()
+								&& state.getMap().getUnit(
+										enemyTurn.getRecruitPos()) != null) {
+							if(enemyTurn.getHasAttacked()) {
+								attackAndMove(enemyTurn);
+								enemyTurn.setHasAttacked(false);
+							} else
+								move(enemyTurn);
 
-					if ((enemyTurn.getHasAttacked())
-							&& (enemyTurn.getHasMoved()))
-						state.getMap()
-								.getUnit(enemyTurn.getUnitTargetPos())
-								.takeDemage(
-										state.getMap()
-												.getUnit(
-														enemyTurn
-																.getUnitEndPos())
-												.getPower());
-
-					if ((enemyTurn.getHasAttacked())
-							&& !(enemyTurn.getHasMoved()))
-						state.getMap()
-								.getUnit(enemyTurn.getUnitTargetPos())
-								.takeDemage(
-										state.getMap()
-												.getUnit(
-														enemyTurn
-																.getUnitStartPos())
-												.getPower());
-
-					if (enemyTurn.getRecruitedUnit() != (TurnInfo.HAS_NOT_RECRUITED)) {
-						if (enemyTurn.getRecruitedUnit() == TurnInfo.ARCHER_RECRUITED) {
-							state.getMap().addUnit(
-									new Archer(player == 0 ? 1 : 0, enemyTurn
-											.getRecruitPos()));
-						} else if (enemyTurn.getRecruitedUnit() == TurnInfo.PALADIN_RECRUITED) {
-							state.getMap().addUnit(
-									new Paladin(player == 0 ? 1 : 0, enemyTurn
-											.getRecruitPos()));
-						} else if (enemyTurn.getRecruitedUnit() == TurnInfo.SOLDIER_RECRUITED) {
-							state.getMap().addUnit(
-									new Soldier(player == 0 ? 1 : 0, enemyTurn
-											.getRecruitPos()));
+							enemyTurn.setHasMoved(false);
 						}
-						((Camp) state.getMap().getResource(
-								enemyTurn.getRecruitPos().getX(),
-								enemyTurn.getRecruitPos().getY()))
-								.setWorking(false);
-
+							
+						recruit(enemyTurn);
 					}
+					
+					if (enemyTurn.getHasAttacked() && enemyTurn.getHasMoved())
+						attackAndMove(enemyTurn);
+					else if (enemyTurn.getHasMoved())
+						move(enemyTurn);
+					else if (enemyTurn.getHasAttacked())
+						attack(enemyTurn);
 
-					// if (enemyTurn.getHasConquered())
-
-					enemyTurn.resetValues();
-					// myTurn.resetValues();
+					isMyTurn = true;
+					myTurn = new TurnInfo();
 					drawEverything();
 					progressDialog.dismiss();
 				}
@@ -580,6 +545,43 @@ public class MainActivity extends Activity implements OnClickListener {
 			}
 		}
 	};
+
+	private void recruit(TurnInfo enemyTurn) {
+		int p = player == 1 ? 2 : 1;
+		if (enemyTurn.getRecruitedUnit() == TurnInfo.ARCHER_RECRUITED)
+			state.getMap().addUnit(new Archer(p, enemyTurn.getRecruitPos()));
+		else if (enemyTurn.getRecruitedUnit() == TurnInfo.PALADIN_RECRUITED)
+			state.getMap().addUnit(new Paladin(p, enemyTurn.getRecruitPos()));
+		else if (enemyTurn.getRecruitedUnit() == TurnInfo.SOLDIER_RECRUITED)
+			state.getMap().addUnit(new Soldier(p, enemyTurn.getRecruitPos()));
+
+		((Camp) state.getMap().getResource(enemyTurn.getRecruitPos()))
+				.setWorking(false);
+	}
+
+	private void attackAndMove(TurnInfo enemyTurn) {
+		move(enemyTurn);
+
+		state.getMap()
+				.getUnit(enemyTurn.getUnitTargetPos())
+				.takeDemage(
+						state.getMap().getUnit(enemyTurn.getUnitEndPos())
+								.getPower());
+	}
+
+	private void move(TurnInfo enemyTurn) {
+		state.getMap().moveUnit(
+				state.getMap().getUnit(enemyTurn.getUnitStartPos()),
+				enemyTurn.getUnitEndPos());
+	}
+
+	private void attack(TurnInfo enemyTurn) {
+		state.getMap()
+				.getUnit(enemyTurn.getUnitTargetPos())
+				.takeDemage(
+						state.getMap().getUnit(enemyTurn.getUnitEndPos())
+								.getPower());
+	}
 
 	/**
 	 * 
@@ -852,21 +854,30 @@ public class MainActivity extends Activity implements OnClickListener {
 			move_range.setText(Html.fromHtml("<b>Move range: </b>"
 					+ selectedUnit.getMove()));
 
-			move.setOnClickListener(new OnClickListener() { // move action
-				@Override
-				public void onClick(View arg0) {
-					action = ACTION_MOVE;
-					dialog.dismiss();
-				}
-			});
+			if (myTurn.getHasMoved())
+				move.setVisibility(View.GONE);
+			else
+				move.setOnClickListener(new OnClickListener() { // move action
+					@Override
+					public void onClick(View arg0) {
+						action = ACTION_MOVE;
+						dialog.dismiss();
+					}
+				});
 
-			attack.setOnClickListener(new OnClickListener() { // attack action
-				@Override
-				public void onClick(View arg0) {
-					action = ACTION_ATTACK;
-					dialog.dismiss();
-				}
-			});
+			if (myTurn.getHasMoved()
+					&& !selectedUnit.getPosition().equals(
+							myTurn.getUnitEndPos()))
+				attack.setVisibility(View.GONE);
+			else
+				attack.setOnClickListener(new OnClickListener() { // attack
+																	// action
+					@Override
+					public void onClick(View arg0) {
+						action = ACTION_ATTACK;
+						dialog.dismiss();
+					}
+				});
 		}
 	}
 
@@ -905,7 +916,8 @@ public class MainActivity extends Activity implements OnClickListener {
 		} else if (selectedResource instanceof Camp) { // if it's a camp
 			if (selectedResource.getOwner() == 0) { // if the camp has no owner
 				// setup dialog
-				view = getLayoutInflater().inflate(R.layout.camp_alert_no_owner, null);
+				view = getLayoutInflater().inflate(
+						R.layout.camp_alert_no_owner, null);
 				builder.setView(view);
 				final Dialog dialog2 = builder.show();
 				Button ok = (Button) view.findViewById(R.id.ok);
@@ -1070,9 +1082,6 @@ public class MainActivity extends Activity implements OnClickListener {
 				selectedUnit = state.getMap().getUnit(x, y);
 				selectedResource = state.getMap().getResource(x, y);
 				if (selectedUnit != null) {
-					if (!myTurn.getHasMoved()) {
-						myTurn.setUnitStartPos(selectedUnit.getPosition());
-					}
 					unitAction();
 				} else if (selectedResource != null) {
 					resourceAction();
@@ -1111,6 +1120,7 @@ public class MainActivity extends Activity implements OnClickListener {
 									Player.CROPS, 1);
 						}
 
+						myTurn.setUnitStartPos(selectedUnit.getPosition());
 						state.getMap().moveUnit(selectedUnit, x, y);
 						myTurn.setUnitEndPos(selectedUnit.getPosition());
 						myTurn.setHasMoved(true);
@@ -1132,6 +1142,7 @@ public class MainActivity extends Activity implements OnClickListener {
 								+ Math.abs(selectedUnit.getPosition().getY()
 										- target.getPosition().getY()) <= selectedUnit
 									.getRange()) {
+							myTurn.setUnitEndPos(selectedUnit.getPosition());
 							myTurn.setHasAttacked(true);
 							myTurn.setUnitTargetPos(target.getPosition());
 							target.takeDemage(selectedUnit.getPower());
@@ -1148,12 +1159,8 @@ public class MainActivity extends Activity implements OnClickListener {
 							if (target.getLife() == 0) {
 								state.getMap().removeUnit(target);
 							}
-							state.getMap()
-									.updateResources(
-											state.getPlayers()[selectedUnit
-													.getOwner() - 1]);
-							state.updateTurn();
-							sendTurn();
+
+							endTurn();
 						} else
 							Toast.makeText(context, R.string.tooFar,
 									Toast.LENGTH_SHORT).show();
@@ -1161,15 +1168,8 @@ public class MainActivity extends Activity implements OnClickListener {
 						Toast.makeText(context, R.string.noTarget,
 								Toast.LENGTH_SHORT).show();
 
-					state.getMap().updateResources(
-							state.getPlayers()[selectedUnit.getOwner() - 1]);
-					// refreshHeader(context.player);
 					selectedUnit = null;
-					// state.updateTurn();
-					// sendState();
 					action = ACTION_NONE;
-					// sendTurn();
-
 				}
 				break;
 			}

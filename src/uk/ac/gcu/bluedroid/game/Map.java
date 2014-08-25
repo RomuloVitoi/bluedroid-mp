@@ -103,6 +103,15 @@ public class Map {
 	/**
 	 * 
 	 * @param unit
+	 * @param pos
+	 */
+	public void moveUnit(Unit unit, Position pos) {
+		moveUnit(unit, pos.getX(),pos.getY());
+	}
+	
+	/**
+	 * 
+	 * @param unit
 	 * @param x
 	 * @param y
 	 */
@@ -218,6 +227,10 @@ public class Map {
 		return units[pos.getY()][pos.getX()];
 	}
 	
+	public Resource getResource(Position pos) {
+		return getResource(pos.getX(), pos.getY());
+	}
+
 	public Resource getResource(int x, int y) {
 		return resources[y][x];
 	}

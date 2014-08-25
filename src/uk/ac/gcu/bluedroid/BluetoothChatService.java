@@ -74,7 +74,7 @@ public class BluetoothChatService {
 	private int mState;
 	
 	// Time to wait for acknowledge (in milliseconds)
-	private static final int ACK_WAIT = 1000;
+	private static final int ACK_WAIT = 3000;
 
 	// Acknowledge Handler
 	Handler ackHandler;

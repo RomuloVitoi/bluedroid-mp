@@ -105,14 +105,4 @@ public class TurnInfo {
 			break;
 		}
 	}
-	
-	public void resetValues (){
-		this.endPos = null;
-		this.startPos = null;
-		this.targetPos = null;
-		this.recruitPos = null;
-		this.hasAttacked = false;
-		this.hasMoved = false;
-		this.hasRecruited = false;
-	}
 }
